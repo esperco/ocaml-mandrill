@@ -62,7 +62,7 @@ type message = {
     (* the message subject *)
   from_email : string;
     (* the sender email address *)
-  from_name : string option;
+  ?from_name : string option;
     (* optional from name to be used *)
   to <ocaml name="to_"> : recipient list;
     (* an array of recipient information *)
@@ -172,11 +172,25 @@ type messages_send_request = {
   key : string;
     (* Personal API key *)
 
-  message : string;
+  message : message;
+    (* the information on the message to send *)
 
-  async : bool;
-  ip_pool : string option;
-  send_at : monkey_date;
+  ~async : bool;
+    (* enable a background sending mode that is optimized for bulk
+       sending. In async mode, messages/send will immediately return a
+       status of "queued" for every recipient. To handle rejections when
+       sending in async mode, set up a webhook for the 'reject'
+       event. Defaults to false for messages with no more than 10
+       recipients; messages with more than 10 recipients are always sent
+       asynchronously, regardless of the value of async. *)
+
+  ?ip_pool : string option;
+    (* the name of the dedicated ip pool that should be used to send
+       the message. If you do not have any dedicated IPs, this parameter
+       has no effect. If you specify a pool that does not exist, your
+       default pool will be used instead. *)
+
+  ?send_at : monkey_date option;
     (* when this message should be sent as a UTC timestamp in
        YYYY-MM-DD HH:MM:SS format. If you specify a time in the past,
        the message will be sent immediately.
@@ -227,3 +241,13 @@ type messages_send_response =
     | Error of (int * messages_send_error)
        (* http response status other than 200, error details *)
     ] <ocaml repr="classic">
+
+
+(* Default parameters used by the test program *)
+type testconf = {
+  key : string;
+  ~sender_name <ocaml default="\"Test Sender\""> : string;
+  sender_email : string;
+  ~recipient_name <ocaml default="\"Test Recipient\""> : string;
+  recipient_email : string;
+} <ocaml field_prefix="test_">

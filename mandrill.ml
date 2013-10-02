@@ -16,8 +16,8 @@ module Messages = struct
 
     let url = base_url ^ "/messages/send.json"
 
-    let make_request message =
-      let body = Mandrill_j.string_of_message message in
+    let make_request send_req =
+      let body = Mandrill_j.string_of_messages_send_request send_req in
       (url, body)
 
     let parse_response status_code body =

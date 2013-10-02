@@ -3,65 +3,92 @@ open Lwt
 
 let http_post url body =
   Cohttp_lwt_unix.Client.call
-    ~body ~chunked:false `POST (Uri.of_string url) >>= function
+    ?body:(Cohttp_lwt_body.body_of_string body)
+    ~chunked:false`POST (Uri.of_string url) >>= function
   | None -> failwith "no response"
   | Some (resp, body) ->
       let status = Cohttp_lwt_unix.Response.status resp in
       let code = Cohttp.Code.code_of_status status in
-      let resp_body = Cohttp_lwt_body.string_of_body body in
+      Cohttp_lwt_body.string_of_body body >>= fun resp_body ->
       return (code, resp_body)
 
-let send message =
-  let url, body = Messages.Send.make_request message in
+let send send_req =
+  let url, body = Mandrill.Messages.Send.make_request send_req in
   http_post url body >>= fun (code, body) ->
-  return (Messages.Send.parse_response code body)
-
-let print_success msg b =
-  printf "%012s %s\n%!" msg (if b then "OK" else "ERROR")
+  return (Mandrill.Messages.Send.parse_response code body)
 
 let random_id =
   Random.self_init ();
   fun () -> sprintf "%08x" (Random.int (1 lsl 30 - 1))
 
-let test1 email_addr () =
-  let credentials = Keys.get () in
-  let id = random_id () in
-  let api_key =
-    match credentials.Keys_t.sendgrid_key with
-        None -> failwith "Missing Sendgrid key"
-      | Some x -> x
-  in
-  Sendgrid.send_mail
-    ~api_user: credentials.Keys_t.sendgrid_user
-    ~api_key
-    ~from: email_addr
-    ~fromname: "Tester Sending"
-    ~to_: email_addr
-    ~toname: "Tester Receiving"
-    ~subject: (sprintf "Welcome! [test %s]" id)
-    ~text: "Welcome to SendGrid!"
-    ~html: "<html><body><p>Welcome to <b>SendGrid</b>!</p></body></html>"
-    ~category: ["test"]
+let make_default_message ~subject ~html conf =
+  let open Mandrill_t in
+  Mandrill_v.create_message
+    ~from_name: conf.test_sender_name
+    ~from_email: conf.test_sender_email
+    ~to_: [ { rec_name = Some conf.test_recipient_name;
+              rec_email = conf.test_recipient_email } ]
+    ~subject
+    ~html
     ()
-    >>= print_success (sprintf "test1 [%s]" id)
+
+let make_default_request ~subject ~html conf =
+  let open Mandrill_t in
+  Mandrill_v.create_messages_send_request
+    ~key: conf.test_key
+    ~message: (make_default_message ~subject ~html conf)
+    ()
+
+let wrap_html s =
+  "<html><body><p>" ^ s ^ "</p></body></html>"
+
+let test_simple conf =
+  send (make_default_request
+          ~subject:"Simple test"
+          ~html:(wrap_html "Simple.")
+          conf)
+  >>= function
+    | Mandrill_t.Success _ -> return true
+    | Mandrill_t.Error _ -> return false
 
 let tests = [
-  "test1", test1 email_addr
+  "simple", test_simple
 ]
 
-let run l =
-  Lwt_list.map_s (fun (name, f) ->
-    printf "TEST %n%!" name;
+let print_test_results l =
+  List.iter (fun (name, success) ->
+    printf "%-12s %s\n" name (if success then "OK" else "ERROR")
+  ) l;
+  flush stdout
 
-let main ~offset =
-  Log.level := `Debug;
-  let email_addr =
-    match Cmdline.parse
-      ~offset
-      ~anon_count:1
-      ~usage_msg:"Usage: test_sendgrid EMAIL" []
-    with
-        [s] -> s
-      | _ -> assert false
-  in
-  Lwt_main.run (Lwt_list.iter_s (fun f -> f ()) tests)
+let run conf l =
+  Lwt_list.map_s (fun (name, f) ->
+    printf "TEST %s\n%!" name;
+    catch
+      (fun () -> f conf)
+      (fun e ->
+        eprintf "Failed with exception: %s\n%!"
+          (Printexc.to_string e);
+        return false
+      )
+    >>= fun success ->
+    return (name, success)
+  ) l
+
+let load_conf file =
+  Ag_util.Json.from_file Mandrill_j.read_testconf file
+
+let main () =
+  let conf_file = ref "test.conf" in
+  let options = [
+    "-conf", Arg.Set_string conf_file,
+    "<file>  JSON config file (see mandrill.atd)";
+  ] in
+  let anon_fun s = failwith ("Bad command-line argument " ^ s) in
+  let err_msg = "Options:\n" in
+  Arg.parse options anon_fun err_msg;
+  let conf = load_conf !conf_file in
+  let test_results = Lwt_main.run (run conf tests) in
+  print_test_results test_results
+
+let () = main ()

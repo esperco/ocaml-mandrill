@@ -2,7 +2,7 @@ exception Api_error of string
 
 module Messages : sig
   module Send : sig
-    val make_request : Mandrill_t.message -> (string * string)
+    val make_request : Mandrill_t.messages_send_request -> (string * string)
       (* Return URL and body suitable for an HTTP POST request *)
 
     val parse_response :
