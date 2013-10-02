@@ -1,0 +1,229 @@
+(*
+  https://mandrillapp.com/api/docs/messages.JSON.html#method-send
+*)
+
+type monkey_date = string wrap <ocaml module="Mandrill_date">
+type json <ocaml module="Mandrill_json"> = abstract
+
+type recipient = {
+  email : string;
+    (* the email address of the recipient required *)
+  ?name : string option;
+    (* the optional display name to use for the recipient *)
+} <ocaml field_prefix="rec_">
+
+type merge_var = {
+  name : string;
+    (* the global merge variable's name. Merge variable names are
+       case-insensitive and may not start with _ *)
+  content : string;
+    (* the global merge variable's content *)
+} <ocaml field_prefix="mer_">
+
+type recipient_merge_vars = {
+  rcpt : string;
+    (* the email address of the recipient that the merge variables
+       should apply to *)
+  ~vars : merge_var list;
+} <ocaml field_prefix="mer_">
+
+type recipient_metadata = {
+  rcpt : string;
+    (* the email address of the recipient that the metadata is
+       associated with *)
+  values : (string * json) list <json repr="object">;
+} <ocaml field_prefix="md_">
+
+type attachment = {
+  type_ <json name="type"> <ocaml name="att_type"> : string;
+    (* the MIME type of the attachment *)
+  name : string;
+    (* the file name of the attachment *)
+  content : string;
+    (* the content of the attachment as a base64-encoded string *)
+} <ocaml field_prefix="att_">
+
+type image = {
+  type_ <json name="type"> <ocaml name="img_type"> : string;
+    (* the MIME type of the image - must start with "image/" *)
+  name : string;
+    (* the Content ID of the image - use <img src="cid:THIS_VALUE">
+       to reference the image in your HTML content *)
+  content : string;
+    (* the content of the image as a base64-encoded string *)
+} <ocaml field_prefix="img_">
+
+type message = {
+  html : string;
+    (* the full HTML content to be sent *)
+  ?text : string option;
+    (* optional full text content to be sent *)
+  subject : string;
+    (* the message subject *)
+  from_email : string;
+    (* the sender email address *)
+  from_name : string option;
+    (* optional from name to be used *)
+  to <ocaml name="to_"> : recipient list;
+    (* an array of recipient information *)
+  ~headers : (string * string) list <json repr="object">;
+    (* optional extra headers to add to the message
+       (most headers are allowed) *)
+
+  ~important : bool;
+    (* whether or not this message is important, and should be delivered
+       ahead of non-important messages *)
+
+  ~track_opens : bool;
+    (* whether or not to turn on open tracking for the message *)
+
+  ~track_clicks : bool;
+    (* whether or not to turn on click tracking for the message *)
+
+  ~auto_text : bool;
+    (* whether or not to automatically generate a text part for messages
+       that are not given text *)
+
+  ~auto_html : bool;
+    (* whether or not to automatically generate an HTML part for messages
+       that are not given HTML *)
+
+  ~inline_css : bool;
+    (* whether or not to automatically inline all CSS styles provided
+       in the message HTML - only for HTML documents less than 256KB in size *)
+
+  ~url_strip_qs : bool;
+    (* whether or not to strip the query string from URLs
+       when aggregating tracked URL data *)
+
+  ~preserve_recipients : bool;
+    (* whether or not to expose all recipients in to "To" header
+       for each email *)
+
+  ~view_content_link : bool;
+    (* set to false to remove content logging for sensitive emails *)
+
+  ?bcc_address : string option;
+    (* an optional address to receive an exact copy of each recipient's email *)
+
+  ?tracking_domain : string option;
+    (* a custom domain to use for tracking opens and clicks
+       instead of mandrillapp.com *)
+
+  ?signing_domain : string option;
+    (* a custom domain to use for SPF/DKIM signing instead of mandrill
+       (for "via" or "on behalf of" in email clients) *)
+
+  ?return_path_domain : string option;
+    (* a custom domain to use for the messages's return-path *)
+
+  ~merge : bool;
+    (* whether to evaluate merge tags in the message.
+       Will automatically be set to true if either merge_vars
+       or global_merge_vars are provided. *)
+
+  ~global_merge_vars : merge_var list;
+    (* global merge variables to use for all recipients.
+       You can override these per recipient. *)
+
+  ~merge_vars : recipient_merge_vars list;
+    (* per-recipient merge variables, which override global merge
+       variables with the same name. *)
+
+  ~tags : string list;
+    (* an array of string to tag the message with. Stats are accumulated
+       using tags, though we only store the first 100 we see,
+       so this should not be unique or change frequently. Tags should be
+       50 characters or less. Any tags starting with an underscore are
+       reserved for internal use and will cause errors. *)
+
+  ?subaccount : string option;
+    (* the unique id of a subaccount for this message - must already exist
+       or will fail with an error *)
+
+  ~google_analytics_domains : string list;
+    (* an array of strings indicating for which any matching URLs
+       will automatically have Google Analytics parameters appended
+       to their query string automatically. *)
+
+  ?google_analytics_campaign : string option;
+    (* optional string indicating the value to set for the utm_campaign
+       tracking parameter. If this isn't provided the email's from address
+       will be used instead. *)
+
+  ~metadata : (string * json) list <json repr="object">;
+    (* metadata an associative array of user metadata.
+       Mandrill will store this metadata and make it available for retrieval.
+       In addition, you can select up to 10 metadata fields to index
+       and make searchable using the Mandrill search api. *)
+
+  ~recipient_metadata : recipient_metadata list;
+    (* Per-recipient metadata that will override the global values
+       specified in the metadata parameter. *)
+
+  ~attachments : attachment list;
+    (* an array of supported attachments to add to the message *)
+
+  ~images : image list;
+    (* an array of embedded images to add to the message *)
+}
+
+type messages_send_request = {
+  key : string;
+    (* Personal API key *)
+
+  message : string;
+
+  async : bool;
+  ip_pool : string option;
+  send_at : monkey_date;
+    (* when this message should be sent as a UTC timestamp in
+       YYYY-MM-DD HH:MM:SS format. If you specify a time in the past,
+       the message will be sent immediately.
+       An additional fee applies for scheduled email,
+       and this feature is only available to accounts with a positive balance.
+
+
+       (for heaven's sake, do not invent your own time format. Use RFC 3339)
+    *)
+}
+
+type messages_send_success = {
+  email : string;
+    (* the email address of the recipient *)
+
+  status : string;
+    (* the sending status of the recipient - either "sent", "queued",
+       "scheduled", "rejected", or "invalid" *)
+
+  ~reject_reason : string option;
+    (* the reason for the rejection if the recipient status is "rejected" *)
+
+  _id : string;
+    (* the message's unique id *)
+}
+
+type messages_send_success_list = messages_send_success list
+
+type messages_send_error = {
+    status : string;
+    code : int;
+    name : string;
+      (*
+        "Invalid_Key": The provided API key is not a valid Mandrill API key
+        "PaymentRequired": The requested feature requires payment.
+        "Unknown_Subaccount": The provided subaccount id does not exist.
+        "ValidationError": The parameters passed to the API call are invalid
+                           or not provided when required
+        "GeneralError": An unexpected error occurred processing the request.
+                        Mandrill developers will be notified.
+      *)
+    message : string;
+} <ocaml field_prefix="err_">
+
+type messages_send_response =
+    [ Success of messages_send_success_list
+       (* ok response *)
+    | Error of (int * messages_send_error)
+       (* http response status other than 200, error details *)
+    ] <ocaml repr="classic">

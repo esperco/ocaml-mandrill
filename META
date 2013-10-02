@@ -1,0 +1,5 @@
+version = "0.0.0"
+description = "Send mail with Mandrill's HTTP API"
+requires = "atdgen unix"
+archive(byte) = "mandrill.cma"
+archive(native) = "mandrill.cmxa"
