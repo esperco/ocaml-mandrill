@@ -27,7 +27,8 @@ opt: ml
 	ocamlfind opt -a -g $(ML) -o mandrill.cmxa -package atdgen,unix
 
 install:
-	ocamlfind install mandrill META `find $(INSTALL_CANDIDATES)`
+	ocamlfind install mandrill META \
+          `find $(INSTALL_CANDIDATES) | grep -v '^test_'`
 
 uninstall:
 	ocamlfind remove mandrill
@@ -36,6 +37,7 @@ test: opt
 	ocamlfind opt -g mandrill.cmxa test_mandrill.ml \
 	  -o test_mandrill.opt \
 	  -package atdgen,unix,cohttp.lwt -linkpkg
+	./test_mandrill.opt -conf test.conf
 
 clean:
 	rm -f *.o *.a *.cm* *.opt *~ *.annot *_[tjv].mli *_[tjv].ml

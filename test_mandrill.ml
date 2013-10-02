@@ -1,16 +1,35 @@
 open Printf
 open Lwt
 
-let http_post url body =
+let print_url kind s =
+  printf "%s URL:\n%s\n%!" kind s
+
+let print_status code =
+  printf "Response status: %i %s\n%!"
+    code
+    (Cohttp.Code.string_of_status (Cohttp.Code.status_of_code code))
+
+let print_body kind s =
+  let s =
+    try Yojson.Basic.prettify s
+    with _ -> s
+  in
+  printf "%s body:\n%s\n%!" kind s
+
+let http_post url req_body_string =
+  print_url "Request" url;
+  print_body "Request" req_body_string;
   Cohttp_lwt_unix.Client.call
-    ?body:(Cohttp_lwt_body.body_of_string body)
+    ?body:(Cohttp_lwt_body.body_of_string req_body_string)
     ~chunked:false`POST (Uri.of_string url) >>= function
   | None -> failwith "no response"
   | Some (resp, body) ->
       let status = Cohttp_lwt_unix.Response.status resp in
       let code = Cohttp.Code.code_of_status status in
-      Cohttp_lwt_body.string_of_body body >>= fun resp_body ->
-      return (code, resp_body)
+      Cohttp_lwt_body.string_of_body body >>= fun resp_body_string ->
+      print_status code;
+      print_body "Response" resp_body_string;
+      return (code, resp_body_string)
 
 let send send_req =
   let url, body = Mandrill.Messages.Send.make_request send_req in
