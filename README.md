@@ -8,9 +8,11 @@ parse the responses. It does not depend on a particular HTTP client.
 Installation
 ------------
 
-Requires atdgen and its dependencies.
+Requires atdgen and its dependencies:
 ```bash
 opam install atdgen
+make
+make install
 ```
 
 Documentation
