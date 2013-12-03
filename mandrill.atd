@@ -210,7 +210,7 @@ type messages_send_success = {
     (* the sending status of the recipient - either "sent", "queued",
        "scheduled", "rejected", or "invalid" *)
 
-  ~reject_reason : string option;
+  ~reject_reason : string nullable;
     (* the reason for the rejection if the recipient status is "rejected" *)
 
   _id : string;
