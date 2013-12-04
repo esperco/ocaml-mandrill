@@ -202,15 +202,22 @@ type messages_send_request = {
     *)
 }
 
+type sending_status = [
+  | Sent <json name="sent">
+  | Queued <json name="queued">
+  | Scheduled <json name="scheduled">
+  | Rejected <json name="rejected">
+  | Invalid <json name="invalid">
+]
+
 type messages_send_success = {
   email : string;
     (* the email address of the recipient *)
 
-  status : string;
-    (* the sending status of the recipient - either "sent", "queued",
-       "scheduled", "rejected", or "invalid" *)
+  status : sending_status;
+    (* the sending status of the recipient *)
 
-  ~reject_reason : string nullable;
+  ?reject_reason : string option;
     (* the reason for the rejection if the recipient status is "rejected" *)
 
   _id : string;
