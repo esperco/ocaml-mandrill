@@ -54,7 +54,7 @@ type image = {
 } <ocaml field_prefix="img_">
 
 type message = {
-  html : string;
+  ?html : string option;
     (* the full HTML content to be sent *)
   ?text : string option;
     (* optional full text content to be sent *)
@@ -70,37 +70,37 @@ type message = {
     (* optional extra headers to add to the message
        (most headers are allowed) *)
 
-  ~important : bool;
+  ?important : bool option;
     (* whether or not this message is important, and should be delivered
        ahead of non-important messages *)
 
-  ~track_opens : bool;
+  ?track_opens : bool option;
     (* whether or not to turn on open tracking for the message *)
 
-  ~track_clicks : bool;
+  ?track_clicks : bool option;
     (* whether or not to turn on click tracking for the message *)
 
-  ~auto_text : bool;
+  ?auto_text : bool option;
     (* whether or not to automatically generate a text part for messages
        that are not given text *)
 
-  ~auto_html : bool;
+  ?auto_html : bool option;
     (* whether or not to automatically generate an HTML part for messages
        that are not given HTML *)
 
-  ~inline_css : bool;
+  ?inline_css : bool option;
     (* whether or not to automatically inline all CSS styles provided
        in the message HTML - only for HTML documents less than 256KB in size *)
 
-  ~url_strip_qs : bool;
+  ?url_strip_qs : bool option;
     (* whether or not to strip the query string from URLs
        when aggregating tracked URL data *)
 
-  ~preserve_recipients : bool;
+  ?preserve_recipients : bool option;
     (* whether or not to expose all recipients in to "To" header
        for each email *)
 
-  ~view_content_link : bool;
+  ~view_content_link <ocaml default="true"> : bool;
     (* set to false to remove content logging for sensitive emails *)
 
   ?bcc_address : string option;
